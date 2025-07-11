@@ -10,6 +10,7 @@ import {
   CreateCheckoutSessionResponse,
   ErrorResponse,
 } from "@/types/stripe";
+import Stripe from "stripe";
 
 export async function POST(
   request: NextRequest
@@ -34,17 +35,17 @@ export async function POST(
     }
 
     // Build session config dynamically
-    let lineItem: any = {
+    const lineItem: Stripe.Checkout.SessionCreateParams.LineItem = {
       price: price_id,
       quantity: 1,
     };
 
-    let sessionConfig: any = {
+    const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       payment_method_types: ["card"],
       mode: "subscription",
       customer: customerId,
       line_items: [lineItem],
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/`,
     };
 
@@ -60,10 +61,12 @@ export async function POST(
     } else {
       // Use manual tax rate for unsupported country if available
       if (manualTaxRates[country]) {
-        lineItem.tax_rates = [manualTaxRates[country]];
+        (lineItem as Stripe.Checkout.SessionCreateParams.LineItem).tax_rates = [
+          manualTaxRates[country],
+        ];
       } else {
-        // Default: no tax rate if not defined
-        lineItem.tax_rates = [];
+        (lineItem as Stripe.Checkout.SessionCreateParams.LineItem).tax_rates =
+          [];
       }
     }
 
@@ -74,8 +77,9 @@ export async function POST(
     }
 
     return NextResponse.json({ checkout_url: session.url });
-  } catch (error: any) {
-    console.error("Error creating checkout session:", error);
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("Error creating checkout session:", err);
+    return NextResponse.json({ error: err.message }, { status: 400 });
   }
 }

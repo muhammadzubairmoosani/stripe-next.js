@@ -38,7 +38,7 @@ export default function Home() {
       } else {
         setMessage(`Error: ${data.error}`);
       }
-    } catch (error) {
+    } catch {
       setMessage("An error occurred while fetching products");
     } finally {
       setLoading(false);
@@ -70,7 +70,7 @@ export default function Home() {
       } else if (data.checkout_url) {
         window.location.href = data.checkout_url;
       }
-    } catch (error) {
+    } catch {
       setMessage("An error occurred");
     } finally {
       setLoading(false);

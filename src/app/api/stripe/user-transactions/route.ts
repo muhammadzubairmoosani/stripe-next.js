@@ -23,8 +23,9 @@ export async function GET(
     });
 
     return NextResponse.json({ transactions: charges.data });
-  } catch (error: any) {
-    console.error("Error fetching user transactions:", error);
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("Error fetching user transactions:", err);
+    return NextResponse.json({ error: err.message }, { status: 400 });
   }
 }

@@ -5,6 +5,7 @@ import {
   CancelSubscriptionResponse,
   ErrorResponse,
 } from "@/types/stripe";
+import Stripe from "stripe";
 
 export async function POST(
   request: NextRequest
@@ -21,16 +22,20 @@ export async function POST(
     }
 
     // Cancel the subscription at the end of the period
-    const deleted = await stripe.subscriptions.update(subscription_id, {
-      cancel_at_period_end: true,
-    });
+    const deleted: Stripe.Subscription = await stripe.subscriptions.update(
+      subscription_id,
+      {
+        cancel_at_period_end: true,
+      }
+    );
 
     return NextResponse.json({
       message: "Subscription cancelled",
       subscription: deleted,
     });
-  } catch (error: any) {
-    console.error("Error canceling subscription:", error);
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("Error canceling subscription:", err);
+    return NextResponse.json({ error: err.message }, { status: 400 });
   }
 }

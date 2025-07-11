@@ -1,3 +1,5 @@
+import Stripe from "stripe";
+
 export interface CreateCheckoutSessionRequest {
   price_id: string;
   email: string;
@@ -13,7 +15,7 @@ export interface UserTransactionsRequest {
 }
 
 export interface UserTransactionsResponse {
-  transactions: any[];
+  transactions: Stripe.Charge[];
 }
 
 export interface CancelSubscriptionRequest {
@@ -22,7 +24,7 @@ export interface CancelSubscriptionRequest {
 
 export interface CancelSubscriptionResponse {
   message: string;
-  subscription: any;
+  subscription: Stripe.Subscription;
 }
 
 export interface UpdateSubscriptionRequest {
@@ -32,7 +34,7 @@ export interface UpdateSubscriptionRequest {
 
 export interface UpdateSubscriptionResponse {
   message: string;
-  subscription: any;
+  subscription: Stripe.Subscription;
 }
 
 export interface ProductsResponse {
@@ -40,7 +42,7 @@ export interface ProductsResponse {
   name: string;
   description: string | null;
   active: boolean;
-  prices: any[];
+  prices: Stripe.Price[];
 }
 
 export interface ErrorResponse {
