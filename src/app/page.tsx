@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRef, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 
 interface StripePrice {
   id: string;
@@ -23,10 +25,33 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [products, setProducts] = useState<StripeProduct[]>([]);
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [txLoading, setTxLoading] = useState(false);
+  const [txError, setTxError] = useState("");
+  const emailRef = useRef("");
+  const searchParams =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search)
+      : null;
+  // Remove useCallback, useSearchParams, sessionChecked, fetchSessionAndTransactions, and all session_id logic
+  // Only keep email/customerId based logic for fetching transactions
 
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  // Remove useCallback, useSearchParams, sessionChecked, fetchSessionAndTransactions, and all session_id logic
+  // Only keep email/customerId based logic for fetching transactions
+
+  // Fetch transactions when customerId changes
+  useEffect(() => {
+    if (customerId) {
+      fetchTransactions(customerId);
+    } else {
+      setTransactions([]);
+    }
+  }, [customerId]);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -77,6 +102,55 @@ export default function Home() {
     }
   };
 
+  // Helper: fetch customerId from backend (simulate, since only in-memory)
+  const fetchCustomerId = async (email: string) => {
+    // In production, you should have a real API for this
+    // For demo, try to create a checkout session (which will create customer if not exists)
+    setTxError("");
+    setTxLoading(true);
+    try {
+      const res = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, country: country || "US", price_id: "" }),
+      });
+      const data = await res.json();
+      // The backend will create customer and store in emailToStripeCustomerId
+      // But we don't get customer_id in response, so we can't fetch transactions directly
+      // For demo, try to fetch with a dummy customer_id (will fail if not created)
+      // In real app, expose an endpoint to get customer_id by email
+      // setCustomerId(data.customer_id) // if available
+      // For now, do nothing
+    } catch (e) {
+      setTxError("Could not fetch customer ID");
+    } finally {
+      setTxLoading(false);
+    }
+  };
+
+  // Helper: fetch transactions
+  const fetchTransactions = async (customerId: string) => {
+    setTxLoading(true);
+    setTxError("");
+    try {
+      const res = await fetch(
+        `/api/stripe/user-transactions?customer_id=${customerId}`
+      );
+      const data = await res.json();
+      if (data.error) {
+        setTxError(data.error);
+        setTransactions([]);
+      } else {
+        setTransactions(data.transactions || []);
+      }
+    } catch (e) {
+      setTxError("Could not fetch transactions");
+      setTransactions([]);
+    } finally {
+      setTxLoading(false);
+    }
+  };
+
   // Sort products by their lowest price (ascending)
   const sortedProducts = [...products].sort((a, b) => {
     const aPrice = a.prices[0]?.unit_amount || 0;
@@ -85,28 +159,78 @@ export default function Home() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center py-8 px-2">
-      <div className="w-full max-w-3xl flex flex-col gap-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col md:flex-row items-start justify-center py-8 px-2">
+      {/* Left Sidebar: Stripe Webhook/Transaction Details */}
+      <aside className="w-full md:w-80 mb-8 md:mb-0 md:mr-8 bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 flex flex-col gap-4 border border-gray-200 dark:border-gray-700">
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+          Latest Stripe Transaction
+        </h2>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+            Email
+          </label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-white"
+            placeholder="user@example.com"
+          />
+        </div>
+        {txLoading ? (
+          <div className="text-gray-700 dark:text-gray-200 text-sm">
+            Loading...
+          </div>
+        ) : txError ? (
+          <div className="text-red-600 dark:text-red-400 text-sm">
+            {txError}
+          </div>
+        ) : transactions.length === 0 ? (
+          <div className="text-gray-700 dark:text-gray-200 text-sm">
+            No transactions found.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {transactions.slice(0, 1).map((tx) => (
+              <div
+                key={tx.id}
+                className="bg-gray-100 dark:bg-gray-900 rounded-lg p-3"
+              >
+                <div>
+                  <span className="font-semibold">Status:</span> {tx.status}
+                </div>
+                <div>
+                  <span className="font-semibold">Amount:</span>{" "}
+                  {tx.amount / 100} {tx.currency?.toUpperCase()}
+                </div>
+                <div>
+                  <span className="font-semibold">ID:</span> {tx.id}
+                </div>
+                <div>
+                  <span className="font-semibold">Created:</span>{" "}
+                  {tx.created
+                    ? new Date(tx.created * 1000).toLocaleString()
+                    : "-"}
+                </div>
+                <div>
+                  <span className="font-semibold">Description:</span>{" "}
+                  {tx.description || "-"}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </aside>
+      {/* Main Content */}
+      <div className="w-full max-w-3xl flex flex-col gap-8 md:mr-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
             Stripe Payment Demo
           </h1>
         </div>
-
+        {/* Remove email input from here */}
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 space-y-6 mx-auto w-full max-w-xl">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-white"
-              placeholder="user@example.com"
-            />
-          </div>
-
+          {/* Email input removed */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
               Country
@@ -224,6 +348,80 @@ export default function Home() {
           </div>
         </div>
       </div>
+      {/* Sidebar: Stripe Test Cards */}
+      <aside className="w-full md:w-80 mt-8 md:mt-0 bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 flex flex-col gap-4 border border-gray-200 dark:border-gray-700">
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+          Stripe Test Cards
+        </h2>
+        <div className="text-sm text-gray-700 dark:text-gray-200">
+          <div className="mb-3">
+            <span className="font-semibold">Card Number:</span>{" "}
+            <span className="font-mono">4242 4242 4242 4242</span>
+          </div>
+          <div className="mb-3">
+            <span className="font-semibold">Expiry:</span>{" "}
+            <span className="font-mono">04/24</span>
+          </div>
+          <div className="mb-3">
+            <span className="font-semibold">CVC:</span>{" "}
+            <span className="font-mono">242</span>
+          </div>
+          <div className="mb-3">
+            <span className="font-semibold">Name:</span> Any name
+          </div>
+          <div className="mb-3">
+            <span className="font-semibold">ZIP:</span> Any 5 digits
+          </div>
+          <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+            For more test cards, see{" "}
+            <a
+              href="https://stripe.com/docs/testing"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline text-blue-600 dark:text-blue-400"
+            >
+              Stripe Docs
+            </a>
+            .
+          </div>
+          {/* Error Scenarios Section */}
+          <div className="mt-6">
+            <h3 className="text-md font-semibold text-gray-900 dark:text-white mb-2">
+              Test Cards for Error Scenarios
+            </h3>
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr>
+                  <th className="text-left pb-1 font-medium">Card Number</th>
+                  <th className="text-left pb-1 font-medium">Result</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="font-mono pr-2">4000 0000 0000 9995</td>
+                  <td>Card declined</td>
+                </tr>
+                <tr>
+                  <td className="font-mono pr-2">4000 0000 0000 5126</td>
+                  <td>Insufficient funds</td>
+                </tr>
+                <tr>
+                  <td className="font-mono pr-2">4000 0000 0000 0341</td>
+                  <td>Incorrect CVC</td>
+                </tr>
+                <tr>
+                  <td className="font-mono pr-2">4000 0000 0000 0069</td>
+                  <td>Expired card</td>
+                </tr>
+                <tr>
+                  <td className="font-mono pr-2">4000 0000 0000 0119</td>
+                  <td>Processing error</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </aside>
     </div>
   );
 }

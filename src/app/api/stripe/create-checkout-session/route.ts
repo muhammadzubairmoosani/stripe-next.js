@@ -45,7 +45,7 @@ export async function POST(
       mode: "subscription",
       customer: customerId,
       line_items: [lineItem],
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/`,
     };
 
