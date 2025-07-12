@@ -41,8 +41,17 @@ export default function Home() {
     fetchProducts();
   }, []);
 
-  // Remove useCallback, useSearchParams, sessionChecked, fetchSessionAndTransactions, and all session_id logic
-  // Only keep email/customerId based logic for fetching transactions
+  // Remove useEffect that auto-fetches on email change
+  // Add handler for button click
+  const isValidEmail = (email: string) => /.+@.+\..+/.test(email);
+  const handleGetTransaction = () => {
+    if (email && isValidEmail(email)) {
+      fetchCustomerId(email);
+    } else {
+      setCustomerId(null);
+      setTransactions([]);
+    }
+  };
 
   // Fetch transactions when customerId changes
   useEffect(() => {
@@ -99,30 +108,31 @@ export default function Home() {
       setMessage("An error occurred");
     } finally {
       setLoading(false);
+      setEmail("");
     }
   };
 
-  // Helper: fetch customerId from backend (simulate, since only in-memory)
+  // Helper: fetch customerId from backend using new API
   const fetchCustomerId = async (email: string) => {
-    // In production, you should have a real API for this
-    // For demo, try to create a checkout session (which will create customer if not exists)
     setTxError("");
     setTxLoading(true);
     try {
-      const res = await fetch("/api/stripe/create-checkout-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, country: country || "US", price_id: "" }),
-      });
+      const res = await fetch(
+        `/api/stripe/customer-id?email=${encodeURIComponent(email)}`
+      );
       const data = await res.json();
-      // The backend will create customer and store in emailToStripeCustomerId
-      // But we don't get customer_id in response, so we can't fetch transactions directly
-      // For demo, try to fetch with a dummy customer_id (will fail if not created)
-      // In real app, expose an endpoint to get customer_id by email
-      // setCustomerId(data.customer_id) // if available
-      // For now, do nothing
+      if (data.error) {
+        setTxError(data.error);
+        setCustomerId(null);
+        setTransactions([]);
+      } else {
+        setCustomerId(data.customer_id);
+        fetchTransactions(data.customer_id);
+      }
     } catch (e) {
       setTxError("Could not fetch customer ID");
+      setCustomerId(null);
+      setTransactions([]);
     } finally {
       setTxLoading(false);
     }
@@ -176,6 +186,13 @@ export default function Home() {
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-white"
             placeholder="user@example.com"
           />
+          <button
+            onClick={handleGetTransaction}
+            disabled={!email || !isValidEmail(email) || txLoading}
+            className="mt-2 w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 transition-colors"
+          >
+            {txLoading ? "Loading..." : "Get Transaction"}
+          </button>
         </div>
         {txLoading ? (
           <div className="text-gray-700 dark:text-gray-200 text-sm">
@@ -230,7 +247,18 @@ export default function Home() {
         </div>
         {/* Remove email input from here */}
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 space-y-6 mx-auto w-full max-w-xl">
-          {/* Email input removed */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+              Email
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-white"
+              placeholder="user@example.com"
+            />
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
               Country
