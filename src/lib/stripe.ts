@@ -31,8 +31,8 @@ export const stripeAutoTaxSupportedCountries = [
 
 // Manual tax rate IDs for unsupported countries
 export const manualTaxRates: Record<string, string> = {
-  PK: "txr_1RiyLpFbQiY6rDWWSj1ruxGN", // Pakistan
-  IN: "txr_1RizcXFbQiY6rDWWpAandcBg", // India (example ID)
-  BD: "txr_1RizfhFbQiY6rDWWTgTPYW82", // Bangladesh (example ID)
-  AE: "txr_1RizgZFbQiY6rDWWbRBs1rKs", // UAE (example ID)
+  PK: "txr_1RkVAZJIOvP468UXlTO7lFOW", // Pakistan
+  IN: "txr_1RkVCfJIOvP468UXtBROoRdf", // India (example ID)
+  BD: "txr_1RkVEJJIOvP468UXjwIUOSbg", // Bangladesh (example ID)
+  AE: "txr_1RkVEvJIOvP468UXaCa4mStl", // UAE (example ID)
 };
