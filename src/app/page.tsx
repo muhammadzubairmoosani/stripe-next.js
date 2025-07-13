@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRef, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import Stripe from "stripe";
 
 interface StripePrice {
   id: string;
@@ -20,22 +19,13 @@ interface StripeProduct {
 }
 
 export default function Home() {
+  const [customerId, setCustomerId] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [country, setCountry] = useState("US");
-  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [products, setProducts] = useState<StripeProduct[]>([]);
-  const [customerId, setCustomerId] = useState<string | null>(null);
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [txLoading, setTxLoading] = useState(false);
-  const [txError, setTxError] = useState("");
-  const emailRef = useRef("");
-  const searchParams =
-    typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search)
-      : null;
-  // Remove useCallback, useSearchParams, sessionChecked, fetchSessionAndTransactions, and all session_id logic
-  // Only keep email/customerId based logic for fetching transactions
+  const [transactions, setTransactions] = useState<Stripe.Charge[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -114,50 +104,42 @@ export default function Home() {
 
   // Helper: fetch customerId from backend using new API
   const fetchCustomerId = async (email: string) => {
-    setTxError("");
-    setTxLoading(true);
     try {
       const res = await fetch(
         `/api/stripe/customer-id?email=${encodeURIComponent(email)}`
       );
       const data = await res.json();
       if (data.error) {
-        setTxError(data.error);
+        setMessage(data.error);
         setCustomerId(null);
         setTransactions([]);
       } else {
         setCustomerId(data.customer_id);
         fetchTransactions(data.customer_id);
       }
-    } catch (e) {
-      setTxError("Could not fetch customer ID");
+    } catch {
+      setMessage("Could not fetch customer ID");
       setCustomerId(null);
       setTransactions([]);
-    } finally {
-      setTxLoading(false);
     }
   };
 
   // Helper: fetch transactions
   const fetchTransactions = async (customerId: string) => {
-    setTxLoading(true);
-    setTxError("");
     try {
       const res = await fetch(
         `/api/stripe/user-transactions?customer_id=${customerId}`
       );
       const data = await res.json();
       if (data.error) {
-        setTxError(data.error);
+        setMessage(data.error);
         setTransactions([]);
       } else {
         setTransactions(data.transactions || []);
       }
-    } catch (e) {
-      setTxError("Could not fetch transactions");
+    } catch {
+      setMessage("Could not fetch transactions");
       setTransactions([]);
-    } finally {
-      setTxLoading(false);
     }
   };
 
@@ -171,7 +153,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col md:flex-row items-start justify-center py-8 px-2">
       {/* Left Sidebar: Stripe Webhook/Transaction Details */}
-      {/* <aside className="w-full md:w-80 mb-8 md:mb-0 md:mr-8 bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 flex flex-col gap-4 border border-gray-200 dark:border-gray-700">
+      <aside className="w-full md:w-80 mb-8 md:mb-0 md:mr-8 bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 flex flex-col gap-4 border border-gray-200 dark:border-gray-700">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
           Latest Stripe Transaction
         </h2>
@@ -188,19 +170,19 @@ export default function Home() {
           />
           <button
             onClick={handleGetTransaction}
-            disabled={!email || !isValidEmail(email) || txLoading}
+            disabled={!email || !isValidEmail(email) || loading}
             className="mt-2 w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 transition-colors"
           >
-            {txLoading ? "Loading..." : "Get Transaction"}
+            {loading ? "Loading..." : "Get Transaction"}
           </button>
         </div>
-        {txLoading ? (
+        {loading ? (
           <div className="text-gray-700 dark:text-gray-200 text-sm">
             Loading...
           </div>
-        ) : txError ? (
+        ) : message ? (
           <div className="text-red-600 dark:text-red-400 text-sm">
-            {txError}
+            {message}
           </div>
         ) : transactions.length === 0 ? (
           <div className="text-gray-700 dark:text-gray-200 text-sm">
@@ -208,7 +190,7 @@ export default function Home() {
           </div>
         ) : (
           <div className="space-y-3">
-            {transactions.slice(0, 1).map((tx) => (
+            {transactions.slice(0, 1).map((tx: Stripe.Charge) => (
               <div
                 key={tx.id}
                 className="bg-gray-100 dark:bg-gray-900 rounded-lg p-3"
@@ -237,7 +219,7 @@ export default function Home() {
             ))}
           </div>
         )}
-      </aside> */}
+      </aside>
       {/* Main Content */}
       <div className="w-full max-w-3xl flex flex-col gap-8 md:mr-8">
         <div className="text-center">
