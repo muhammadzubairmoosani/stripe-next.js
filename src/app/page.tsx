@@ -152,8 +152,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col md:flex-row items-start justify-center py-8 px-2">
+    
       {/* Left Sidebar: Stripe Webhook/Transaction Details */}
-      <aside className="w-full md:w-80 mb-8 md:mb-0 md:mr-8 bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 flex flex-col gap-4 border border-gray-200 dark:border-gray-700">
+      {/* <aside className="w-full md:w-80 mb-8 md:mb-0 md:mr-8 bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 flex flex-col gap-4 border border-gray-200 dark:border-gray-700">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
           Latest Stripe Transaction
         </h2>
@@ -219,7 +220,8 @@ export default function Home() {
             ))}
           </div>
         )}
-      </aside>
+      </aside> */}
+
       {/* Main Content */}
       <div className="w-full max-w-3xl flex flex-col gap-8 md:mr-8">
         <div className="text-center">
@@ -332,7 +334,7 @@ export default function Home() {
           </div>
         )}
 
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 w-full max-w-xl mx-auto">
+        {/* <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 w-full max-w-xl mx-auto">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 text-center md:text-left">
             API Endpoints
           </h2>
@@ -356,7 +358,7 @@ export default function Home() {
               <strong>POST</strong> /api/stripe/webhook
             </p>
           </div>
-        </div>
+        </div> */}
       </div>
       {/* Sidebar: Stripe Test Cards */}
       <aside className="w-full md:w-80 mt-8 md:mt-0 bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 flex flex-col gap-4 border border-gray-200 dark:border-gray-700">
